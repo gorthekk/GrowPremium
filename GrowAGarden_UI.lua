@@ -1,253 +1,435 @@
--- Grow a Garden Premium - Script Complet (Fusionné & Stylisé)
--- Auteur: GPT & gorthekk | Compatible JJSploit / KRNL / Synapse
+-- GrowAGarden_Complete_UI.lua
+-- Fusionné, stylisé, déplaçable, toggle avec LeftCtrl
 
--- Services
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
--- Anti double load
-if getgenv().GrowAGardenLoaded then return end
-getgenv().GrowAGardenLoaded = true
-
--- Variables UI
+-- Config toggle UI key
 local toggleKey = Enum.KeyCode.LeftControl
-local uiOpen = true
 
--- Fonction pour rendre GUI déplaçable
-local function makeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+-- Helper function: create UI elements
+local function create(className, properties)
+    local obj = Instance.new(className)
+    for prop, val in pairs(properties) do
+        obj[prop] = val
+    end
+    return obj
+end
+
+-- Main UI
+local ScreenGui = create("ScreenGui", {Name="GrowAGarden_UI", ResetOnSpawn=false, Parent=game.CoreGui})
+
+local MainFrame = create("Frame", {
+    Parent = ScreenGui,
+    Size = UDim2.new(0, 450, 0, 350),
+    Position = UDim2.new(0.3, 0, 0.3, 0),
+    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+})
+
+-- Rounded corners
+local UICorner = create("UICorner", {Parent=MainFrame, CornerRadius=UDim.new(0,10)})
+
+-- Title bar for drag
+local TitleBar = create("Frame", {
+    Parent = MainFrame,
+    Size = UDim2.new(1, 0, 0, 30),
+    BackgroundColor3 = Color3.fromRGB(45, 45, 45),
+})
+create("UICorner", {Parent=TitleBar, CornerRadius=UDim.new(0,10)})
+
+local TitleLabel = create("TextLabel", {
+    Parent = TitleBar,
+    Text = "Grow A Garden - Ultimate UI",
+    Font = Enum.Font.GothamBold,
+    TextSize = 18,
+    TextColor3 = Color3.fromRGB(230,230,230),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0.02, 0, 0, 0),
+    Size = UDim2.new(0.8, 0, 1, 0),
+    TextXAlignment = Enum.TextXAlignment.Left,
+})
+
+-- Close/Minimize button
+local CloseBtn = create("TextButton", {
+    Parent = TitleBar,
+    Text = "-",
+    Font = Enum.Font.GothamBold,
+    TextSize = 22,
+    TextColor3 = Color3.fromRGB(230, 230, 230),
+    BackgroundColor3 = Color3.fromRGB(65, 65, 65),
+    Size = UDim2.new(0, 30, 1, 0),
+    Position = UDim2.new(0.92, 0, 0, 0),
+})
+create("UICorner", {Parent=CloseBtn, CornerRadius=UDim.new(0,5)})
+
+local minimized = false
+
+CloseBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    for _, child in pairs(MainFrame:GetChildren()) do
+        if child ~= TitleBar then
+            child.Visible = not minimized
+        end
+    end
+    CloseBtn.Text = minimized and "+" or "-"
+    if minimized then
+        MainFrame.Size = UDim2.new(0, 250, 0, 30)
+    else
+        MainFrame.Size = UDim2.new(0, 450, 0, 350)
+    end
+end)
+
+-- Dragging system
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    UIS.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
 end
 
--- Création ScreenGui
-local screenGui = Instance.new("ScreenGui", game.CoreGui)
-screenGui.Name = "GrowAGardenUI"
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
 
--- Main Frame
-local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-mainFrame.Active = true; makeDraggable(mainFrame)
-
--- UICorner
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
-
--- Toggle Button
-local toggleBtn = Instance.new("TextButton", screenGui)
-toggleBtn.Name = "ToggleBtn"
-toggleBtn.Size = UDim2.new(0, 120, 0, 30)
-toggleBtn.Position = UDim2.new(0.3, 0, 0.2, -35)
-toggleBtn.Text = "Toggle UI"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,8)
-toggleBtn.MouseButton1Click:Connect(function()
-    uiOpen = not uiOpen
-    mainFrame.Visible = uiOpen
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
 end)
 
--- Gus: close button
-local closeBtn = Instance.new("TextButton", mainFrame)
-closeBtn.Size = UDim2.new(0, 25, 0, 25)
-closeBtn.Position = UDim2.new(1, -30, 0, 5)
-closeBtn.Text = "X"
-closeBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0,6)
-closeBtn.MouseButton1Click:Connect(function()
-    uiOpen = false
-    mainFrame.Visible = false
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
 end)
 
--- Tab Buttons
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Tab buttons frame
+local TabFrame = create("Frame", {
+    Parent = MainFrame,
+    Position = UDim2.new(0, 5, 0, 35),
+    Size = UDim2.new(0, 440, 0, 30),
+    BackgroundTransparency = 1,
+})
+
+local TabButtons = {}
+
+local TabsContent = create("Frame", {
+    Parent = MainFrame,
+    Position = UDim2.new(0, 5, 0, 70),
+    Size = UDim2.new(1, -10, 1, -75),
+    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+    BorderSizePixel = 0,
+})
+create("UICorner", {Parent=TabsContent, CornerRadius=UDim.new(0,8)})
+
+-- Helper to create tab button
+local function createTabButton(name, pos)
+    local btn = create("TextButton", {
+        Parent = TabFrame,
+        Text = name,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(200, 200, 200),
+        BackgroundColor3 = Color3.fromRGB(55, 55, 55),
+        Position = UDim2.new(0, pos, 0, 0),
+        Size = UDim2.new(0, 70, 1, 0),
+    })
+    create("UICorner", {Parent=btn, CornerRadius=UDim.new(0,5)})
+    return btn
+end
+
+local currentTab = nil
+local tabFrames = {}
+
+-- Tab creation helper
+local function createTab(name)
+    local frame = create("Frame", {
+        Parent = TabsContent,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Visible = false,
+    })
+    tabFrames[name] = frame
+    return frame
+end
+
+local function selectTab(name)
+    if currentTab then
+        tabFrames[currentTab].Visible = false
+        TabButtons[currentTab].BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+        TabButtons[currentTab].TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    currentTab = name
+    tabFrames[name].Visible = true
+    TabButtons[name].BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+    TabButtons[name].TextColor3 = Color3.fromRGB(255, 255, 255)
+end
+
+-- Create tabs and buttons
 local tabNames = {"Shop", "Pets", "Stats", "Plant", "Mutation", "Config"}
-local tabs = {}
-local tabButtons = {}
-local buttonFrame = Instance.new("Frame", mainFrame)
-buttonFrame.Size = UDim2.new(1, -20, 0, 30)
-buttonFrame.Position = UDim2.new(0,10,0,40)
-buttonFrame.BackgroundTransparency = 1
-
-local spacing = 5
-local btnWidth = (280 - spacing*(#tabNames-1)) / #tabNames
-
-for i,name in ipairs(tabNames) do
-    local btn = Instance.new("TextButton", buttonFrame)
-    btn.Size = UDim2.new(0, btnWidth, 1, 0)
-    btn.Position = UDim2.new(0, (i-1)*(btnWidth+spacing), 0, 0)
-    btn.Text = name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-    tabButtons[name] = btn
-    btn.MouseButton1Click:Connect(function()
-        for _,fr in pairs(tabs) do fr.Visible = false end
-        tabs[name].Visible = true
+for i, name in ipairs(tabNames) do
+    TabButtons[name] = createTabButton(name, (i-1)*75)
+    local tabFrame = createTab(name)
+    TabButtons[name].MouseButton1Click:Connect(function()
+        selectTab(name)
     end)
 end
 
--- Création des pages
-for _,name in ipairs(tabNames) do
-    local page = Instance.new("Frame", mainFrame)
-    page.Name = name.."Page"
-    page.Size = UDim2.new(1, -20, 1, -80)
-    page.Position = UDim2.new(0,10,0,80)
-    page.BackgroundTransparency = 1
-    page.Visible = false
-    tabs[name] = page
-    -- Layout list
-    local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0,8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-end
--- Default page
-tabs["Shop"].Visible = true
+selectTab("Shop")
 
--- ====== Fonctions de catégorie ======
--- Shop
-local function fillShop()
-    local page = tabs["Shop"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    local fruits = {"Watermelon","Strawberry","Coconut"}
-    for _,item in ipairs(fruits) do
-        local btn = Instance.new("TextButton", page)
-        btn.Size = UDim2.new(1,0,0,30)
-        btn.Text = "Buy "..item
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 14
-        btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-        btn.MouseButton1Click:Connect(function()
-            print("[Shop] Achat de "..item)
-            -- code achat
-        end)
-    end
-end
--- Pets
-local function fillPets()
-    local page = tabs["Pets"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    -- Exemples de pets
-    local pets = { {name="PetA",chance=10},{name="PetB",chance=5} }
-    for _,p in ipairs(pets) do
-        local frame = Instance.new("Frame", page)
-        frame.Size = UDim2.new(1,0,0,50)
-        frame.BackgroundColor3 = Color3.fromRGB(50,50,50)
-        Instance.new("UICorner", frame).CornerRadius = UDim.new(0,6)
-        local lbl = Instance.new("TextLabel", frame)
-        lbl.Size = UDim2.new(1,0,1,0)
-        lbl.Text = p.name.." - "..p.chance.."%"
-        lbl.Font = Enum.Font.Gotham
-        lbl.TextSize = 14
-        lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    end
-end
--- Stats
-local function fillStats()
-    local page = tabs["Stats"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    local stats = {Plant=100,Water=200,Harvest=150}
-    for k,v in pairs(stats) do
-        local lbl = Instance.new("TextLabel", page)
-        lbl.Size = UDim2.new(1,0,0,25)
-        lbl.Text = k..": "..v
-        lbl.Font = Enum.Font.Gotham
-        lbl.TextSize = 14
-        lbl.TextColor3 = Color3.fromRGB(255,255,255)
-        lbl.BackgroundTransparency = 1
-    end
-end
--- Plant
-local function fillPlant()
-    local page = tabs["Plant"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    local actions = {{"AutoPlant",function() print("AutoPlant") end},
-                     {"AutoWater",function() print("AutoWater") end},
-                     {"AutoHarvest",function() print("AutoHarvest") end}}
-    for _,act in ipairs(actions) do
-        local btn = Instance.new("TextButton", page)
-        btn.Size = UDim2.new(1,0,0,30)
-        btn.Text = act[1]
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 14
-        btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-        btn.MouseButton1Click:Connect(act[2])
-    end
-end
--- Mutation
-local function fillMutation()
-    local page = tabs["Mutation"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    local mutations = {"Mutation1","Mutation2","Mutation3"}
-    for _,m in ipairs(mutations) do
-        local btn = Instance.new("TextButton", page)
-        btn.Size = UDim2.new(1,0,0,30)
-        btn.Text = m
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 14
-        btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-        btn.MouseButton1Click:Connect(function()
-            print("[Mutation] "..m)
-        end)
-    end
-end
--- Config
-local function fillConfig()
-    local page = tabs["Config"]
-    page:ClearAllChildren()
-    Instance.new("UIListLayout", page).Padding = UDim.new(0,8)
-    local lbl = Instance.new("TextLabel", page)
-    lbl.Size = UDim2.new(1,0,0,25)
-    lbl.Text = "Toggle UI Key: "..tostring(toggleKey)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 14
+-- ======= Contenus des onglets ======= --
+
+-- SHOP TAB
+local ShopTab = tabFrames["Shop"]
+local shopTitle = create("TextLabel", {
+    Parent = ShopTab,
+    Text = "Acheter des Fruits",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(220, 220, 220),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 0, 30),
+})
+
+-- Exemple de fruits à acheter
+local fruits = {
+    {name="Watermelon", price=50},
+    {name="Strawberry", price=35},
+    {name="Blueberry", price=40},
+}
+
+local function createFruitButton(fruit, y)
+    local btn = create("TextButton", {
+        Parent = ShopTab,
+        Text = fruit.name .. " - $" .. fruit.price,
+        Font = Enum.Font.Gotham,
+        TextSize = 16,
+        TextColor3 = Color3.fromRGB(255,255,255),
+        BackgroundColor3 = Color3.fromRGB(70, 70, 70),
+        Position = UDim2.new(0, 10, 0, y),
+        Size = UDim2.new(0, 200, 0, 35),
+    })
+    create("UICorner", {Parent=btn, CornerRadius=UDim.new(0,5)})
+    btn.MouseButton1Click:Connect(function()
+        print("Acheter fruit:", fruit.name)
+        -- TODO: Appeler fonction achat jeu ici
+    end)
 end
 
--- Remplir toutes les pages
-fillShop(); fillPets(); fillStats(); fillPlant(); fillMutation(); fillConfig()
+for i, fruit in ipairs(fruits) do
+    createFruitButton(fruit, 50 + (i-1)*40)
+end
 
--- Écoute touche pour toggle UI
-UIS.InputBegan:Connect(function(input,gameProcessed)
-    if not gameProcessed and input.KeyCode == toggleKey then
-        uiOpen = not uiOpen
-        mainFrame.Visible = uiOpen
+-- PETS TAB
+local PetsTab = tabFrames["Pets"]
+local petsTitle = create("TextLabel", {
+    Parent = PetsTab,
+    Text = "Animaux et Œufs",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(220, 220, 220),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 0, 30),
+})
+
+local pets = {
+    {name="Bunny", chance=25, description="Un petit lapin adorable."},
+    {name="Dragon", chance=5, description="Un dragon rare et puissant."},
+    {name="Cat", chance=40, description="Un chat affectueux."},
+}
+
+local function createPetInfo(pet, y)
+    local frame = create("Frame", {
+        Parent = PetsTab,
+        Position = UDim2.new(0, 10, 0, y),
+        Size = UDim2.new(0, 400, 0, 70),
+        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+    })
+    create("UICorner", {Parent=frame, CornerRadius=UDim.new(0,6)})
+
+    local nameLabel = create("TextLabel", {
+        Parent = frame,
+        Text = pet.name .. " (".. pet.chance .."% chance)",
+        Font = Enum.Font.GothamBold,
+        TextSize = 16,
+        TextColor3 = Color3.fromRGB(240, 240, 240),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 5),
+        Size = UDim2.new(1, -20, 0, 20),
+    })
+
+    local descLabel = create("TextLabel", {
+        Parent = frame,
+        Text = pet.description,
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(200, 200, 200),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 30),
+        Size = UDim2.new(1, -20, 0, 30),
+        TextWrapped = true,
+    })
+end
+
+for i, pet in ipairs(pets) do
+    createPetInfo(pet, 50 + (i-1)*80)
+end
+
+-- STATS TAB
+local StatsTab = tabFrames["Stats"]
+local statsTitle = create("TextLabel", {
+    Parent = StatsTab,
+    Text = "Statistiques du Joueur",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(220, 220, 220),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 0, 30),
+})
+
+local function updateStats()
+    local plr = LocalPlayer
+    -- Exemple fictif de stats
+    local statsText = "Level: ".. (plr:FindFirstChild("leaderstats") and plr.leaderstats.Level.Value or "N/A") .. "\n" ..
+                      "Fruits récoltés: 123\n" ..
+                      "Plants actifs: 15\n"
+    return statsText
+end
+
+local statsLabel = create("TextLabel", {
+    Parent = StatsTab,
+    Text = updateStats(),
+    Font = Enum.Font.Gotham,
+    TextSize = 16,
+    TextColor3 = Color3.fromRGB(230,230,230),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 50),
+    Size = UDim2.new(1, -20, 1, -60),
+    TextWrapped = true,
+    TextYAlignment = Enum.TextYAlignment.Top,
+})
+
+RunService.Heartbeat:Connect(function()
+    statsLabel.Text = updateStats()
+end)
+
+-- PLANT TAB
+local PlantTab = tabFrames["Plant"]
+local plantTitle = create("TextLabel", {
+    Parent = PlantTab,
+    Text = "Contrôle des Plants",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(220, 220, 220),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 0, 30),
+})
+
+local autoPlantToggle = create("TextButton", {
+    Parent = PlantTab,
+    Text = "Auto Plant: OFF",
+    Font = Enum.Font.Gotham,
+    TextSize = 16,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundColor3 = Color3.fromRGB(70, 70, 70),
+    Position = UDim2.new(0, 10, 0, 50),
+    Size = UDim2.new(0, 200, 0, 40),
+})
+create("UICorner", {Parent=autoPlantToggle, CornerRadius=UDim.new(0,6)})
+
+local autoWaterToggle = create("TextButton", {
+    Parent = PlantTab,
+    Text = "Auto Water: OFF",
+    Font = Enum.Font.Gotham,
+    TextSize = 16,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundColor3 = Color3.fromRGB(70, 70, 70),
+    Position = UDim2.new(0, 10, 0, 100),
+    Size = UDim2.new(0, 200, 0, 40),
+})
+create("UICorner", {Parent=autoWaterToggle, CornerRadius=UDim.new(0,6)})
+
+local autoHarvestToggle = create("TextButton", {
+    Parent = PlantTab,
+    Text = "Auto Harvest: OFF",
+    Font = Enum.Font.Gotham,
+    TextSize = 16,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundColor3 = Color3.fromRGB(70, 70, 70),
+    Position = UDim2.new(0, 10, 0, 150),
+    Size = UDim2.new(0, 200, 0, 40),
+})
+create("UICorner", {Parent=autoHarvestToggle, CornerRadius=UDim.new(0,6)})
+
+local autoPlant = false
+local autoWater = false
+local autoHarvest = false
+
+autoPlantToggle.MouseButton1Click:Connect(function()
+    autoPlant = not autoPlant
+    autoPlantToggle.Text = "Auto Plant: " .. (autoPlant and "ON" or "OFF")
+end)
+
+autoWaterToggle.MouseButton1Click:Connect(function()
+    autoWater = not autoWater
+    autoWaterToggle.Text = "Auto Water: " .. (autoWater and "ON" or "OFF")
+end)
+
+autoHarvestToggle.MouseButton1Click:Connect(function()
+    autoHarvest = not autoHarvest
+    autoHarvestToggle.Text = "Auto Harvest: " .. (autoHarvest and "ON" or "OFF")
+end)
+
+-- Simulate auto plant/water/harvest (pseudo-code)
+RunService.Heartbeat:Connect(function()
+    if autoPlant then
+        -- TODO: call game function to plant all seeds
+        -- print("Auto Planting...")
+    end
+    if autoWater then
+        -- TODO: water all plants
+        -- print("Auto Watering...")
+    end
+    if autoHarvest then
+        -- TODO: harvest ready fruits
+        -- print("Auto Harvesting...")
     end
 end)
 
-print("Grow a Garden UI Chargée !")
+-- MUTATION TAB
+local MutationTab = tabFrames["Mutation"]
+local mutationTitle = create("TextLabel", {
+    Parent = MutationTab,
+    Text = "Menu Mutation",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(220, 220, 220),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 0, 30),
+})
+
+local mutationButtonsData = {
+    {name="Mutate All Fruits", action=function() print("Mutation: All Fruits") end},
+    {name="Mutate Rare Fruits", action=function() print("Mutation: Rare Fruits") end},
+    {name="Reset Mutations", action=function() print("Mutation: Reset") end},
